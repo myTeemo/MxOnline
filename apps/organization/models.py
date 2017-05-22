@@ -45,4 +45,3 @@ class Teacher(models.Model):
         verbose_name = u'讲师'
         verbose_name_plural = verbose_name
 
-
