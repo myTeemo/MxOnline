@@ -1,11 +1,14 @@
 # MxOnline在线学习系统
 
-- 系统环境：  
+### 系统环境：  
 
-1. django1.9 
-2. python2.7
-
-
+1. django1.9([django1.9](https://www.djangoproject.com/download/))
+2. python2.7([python2.7](https://www.python.org/downloads/release/python-2713/))
+3. xadmin([github上xadmin最新版](https://github.com/sshwsfc/xadmin))
+4. virtualenv/virtualenvwrapper
+5. Pillow4.0.0( ```pip install pillow```)
+6. django-crispy-forms1.6.1
+7. MySQL-python1.2.5
 
 ### 2017/05/22 更新内容
 1. 使用xadmin第三方后台管理系统取代admin  
@@ -63,4 +66,120 @@
    class UsersConfig(AppConfig):
         name = 'users'
         verbose_name = u'用户管理' # 新增本行 
+```
+
+
+### 2017/05/23 更新内容
+
+1. 配置静态文件
+2. 配置url
+3. 配置登录逻辑
+4. 配置使用邮箱登录
+
+- 配置静态文件
+
+>项目中会使用静态文件,包括js、css、images等一系列资源文件,使用django配置静态资源文件夹
+
+>在项目的根目录下建立static文件夹,将资源文件放置其中  
+>在settings.py中配置字段
+
+```python
+
+   import os
+   
+   STATICFILES_DIRS = (
+       os.path.join(BASE_DIR,'static'),
+   )
+```
+
+- 配置url
+
+>urls.py配置
+
+```python
+
+    from django.conf.urls import url
+    from django.views.generic import TemplateView
+    
+    urlpattern = [
+        url(r'^$',TemplateView.as_view(template_name='index.html'),name='index'),
+    ]
+    
+```
+
+- 登录逻辑配置
+
+> 在users应用下的views.py中编写登录逻辑代码
+
+```python
+    # -*- coding:utf-8 -*-
+    from django.contrib.auth import authenticate
+    from django.contrib.auth import login
+    from django.shortcuts import render
+    
+    def user_login(request):
+        if request.method == 'POST':
+            user_name = request.POST.get('username','')
+            pass_word = request.POST.get('password','')
+            
+            user = authenticate(username=user_name,password=pass_word)
+            
+            if user is not None:
+                login(request,user)
+                return render(request,"index.html",{})
+            else:
+                return render(request,"login.html",{'msg':'登录名或密码错误'})
+        elif request.method == "GET":
+            return render(request,"login.html",{})
+            
+```
+
+> authenticate(username='xxx',password='xxx')
+> 上面是固定写法,对传入的用户名和密码进行验证,成功的话返回user对象,这里的user对象就是在usersapp下扩展的UserProfile
+> 另外注意authenticate方法中的参数,第一个参数叫username,第二个叫password,一定要加上,否则会报错
+
+> login(request,user)
+> 上面是固定写法,第一个参数是request,第二参数是authenticate认证成功后返回的user对象
+
+上面定义成功后在templates中进行判断是否成功登录
+
+```
+    {% if request.user.is_authenticated %}
+        xxx
+    {% else %}
+        xxx
+    {% endif %}
+           
+
+```
+
+- 配置可以使用邮箱登录
+
+> Django默认使用用户名登录,这里修改默认设置,重新配置可以使用邮箱登录
+
+```python
+    # 修改users/views.py
+    
+    from django.contrib.auth.backends import ModelBackend
+    from django.db.models import Q
+    
+    from .models import UserProfile
+    
+    class CustomBackends(ModelBackend):
+        def authenticate(self, username=None, password=None, **kwargs):
+            try:
+                user = UserProfile.objects.get(Q(username=username)|Q(email=username))
+                
+                if user.check_password(password):
+                    return user
+                else:
+                    return None
+            except Exception as e:
+                return None
+   
+    
+    # 配置完毕之后再settings.py中添加字段使之生效
+    AUTHENTICATION_BACKENDS = (
+        'users.views.CustomBackends',
+    )
 ```
