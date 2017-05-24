@@ -183,3 +183,115 @@
         'users.views.CustomBackends',
     )
 ```
+
+### 2017/05/24更新内容
+
+1. 更改用户登录的方式为基于类的方式
+2. 添加Django的表单类,从而进行表单验证
+3. 对于表单的验证结果向前台进行输出
+
+- 配置基于类的方式登录
+
+> 通常我们在一些列的教程中看到,views.py中的视图一般是基于函数的方式进行登录
+> 但是还可以通过类的方式进行登录,以为类中可以有很多的方法,而如果使用函数的方法进行
+> 登录的话需要些很多的方法,看起来不好,显得过于杂乱。
+
+>详细配置如下
+
+```python
+    # -*- coding:utf-8 -*-
+    # /apps/users/views.py
+    from django.shortcuts import render
+    from django.contrib.auth import authenticate
+    from django.contrib.auth import login
+    from django.views.generic.base import View
+    
+    
+    class LoginView(View):
+        def get(self,request):
+            return render(request,'index.html',{})
+        
+        def post(self,request):
+            user_name = request.POST.get('username','')
+            pass_word = request.POST.get('password','')
+            
+            user = authenticate(username=user_name,password=pass_word)
+            
+            if user is not None:
+                login(request,user)
+                return render(request,'index.html',{})
+            else:
+                return render(request,'login.html',{'msg':'用户名或密码错误'})
+        
+        
+```  
+
+```python
+    # MxOnline/urls.py
+    from django.conf.urls import url
+    from users.views import LoginView
+    
+
+    urlpatterns = [
+        url(r'^login/$',LoginView.as_view(),name='login')
+    ]
+    # 这里要配置自己写的类的as_view()方法,一定要加括号
+```
+
+- 添加表单进行验证
+
+> Django自带了表单类,我们可以通过继承表单,定义自己的表单,然后在客户端用户提交的数据
+> 进行数据库验证之间,进行预先判断。这一步在项目开发过程中,不能缺少
+
+```python
+    # /apps/users/forms.py 新建
+    
+    from django import forms
+    
+     
+    class Login(forms.Form):
+        username = forms.CharField(required=True)
+        password = forms.CharField(required=True,min_length=5)
+    
+    
+    # 修改 /apps/users/views/LoginView
+   
+    
+    from .forms import LoginForm
+    from django.shortcuts import render
+    from django.contrib.auth import authenticate
+    from django.contrib.auth import login
+    
+    
+    class LoginView(View):
+        def get(self,request):
+            return render(request,"login.html",{})
+
+        def post(self,request):
+            login_form = LoginForm(request.POST)
+            if login_form.is_valid():
+                user_name = request.POST.get('username','')
+                pass_word = request.POST.get('password','')
+                user = authenticate(username=user_name,password=pass_word)
+                if user is not None:
+                    login(request,user)
+                    return render(request,'index.html',)
+                else:
+                    return render(request,'login.html',{'msg':'用户名或密码错误'})
+            else:
+                return render(request,'login.html',{'login_form':login_form})
+
+```
+
+
+```html
+    <div class="form-group marb20 {% if login_form.errors.username %}errorput{% endif %}">
+        <label>用&nbsp;户&nbsp;名</label>
+        <input name="username" id="account_l" type="text" placeholder="手机号/邮箱" />
+    </div>
+    <div class="form-group marb8 {% if login_form.errors.password %}errorput{% endif %}">
+        <label>密&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;码</label>
+        <input name="password" id="password_l" type="password" placeholder="请输入您的密码" />
+     </div>
+    <div class="error btns login-form-tips" id="jsLoginTips">{% for key,error in login_form.errors.items %}{{ error }}{% endfor %}{{ msg }}</div>
+```
