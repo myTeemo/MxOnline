@@ -9,6 +9,7 @@
 5. Pillow4.0.0( ```pip install pillow```)
 6. django-crispy-forms1.6.1
 7. MySQL-python1.2.5
+8. django-simple-captcha 0.4.6(```pip install django-simple-captcha==0.4.6``` [django-simple-captcha](https://github.com/mbi/django-simple-captcha))
 
 ### 2017/05/22 更新内容
 1. 使用xadmin第三方后台管理系统取代admin  
@@ -295,3 +296,61 @@
      </div>
     <div class="error btns login-form-tips" id="jsLoginTips">{% for key,error in login_form.errors.items %}{{ error }}{% endfor %}{{ msg }}</div>
 ```
+
+
+### 2017/05/25-2017/05/26 更新内容
+
+1. 添加django-simple-captcha库,生成和处理验证码问题
+2. 配置注册逻辑
+3. 发送邮件,进行注册激活
+
+
+- 生成和处理验证码
+
+>为了方便注册的时候使用验证码进行验证,使用github上面一个非常方便的开源验证码生成和处理的库(django-simple-captcha)它是支持django的
+    
+1. 在我们安装虚拟环境中安装库  
+ ```pip install django-simple-captcha==0.4.6```  
+ 注意使用的版本
+ 
+2. settings.py中配置
+```python
+    INSTALLED_APPS =[
+        'capthcha',
+    ]
+```
+
+3. urls.py 配置
+```python
+    from django.conf.urls import include
+    from django.conf.urls import url
+    
+    urlpatterns =[
+        url(r'^captcha/',include('captcha.urls')),
+    ]
+    
+```
+
+4. 调用方式
+```python
+    # -*- coding:utf-8 -*-
+    from django import forms
+    from captcha.fields import CaptchaField
+    
+    class RegisterForm(forms.Form):
+        email = forms.EmailField(required=True)
+        password = forms.CharField(required=True,min_length=6)
+        captcha = CaptchaField(error_messages={'invalid':u'验证码错误'})
+```
+
+
+- 注册逻辑及发送邮件实现
+
+  参见:
+    > apps/utils/email_send.py
+    > MxOnlie/settings.py
+    > apps/users/views.py
+    > MxOnline/urls.py
+    
+  要注意邮件的配置项以及发送邮件的参数填写
+ 
